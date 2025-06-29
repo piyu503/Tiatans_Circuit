@@ -1,110 +1,111 @@
-const boardElement = document.getElementById('board');
-const scoreRedElement = document.getElementById('scoreRed');
-const scoreBlueElement = document.getElementById('scoreBlue');
-const timerRedElement = document.getElementById('timerRed');
-const timerBlueElement = document.getElementById('timerBlue');
-
-let currentPlayer = 'red';
-let boardNodes = [];
+const board = document.getElementById("gameBoard");
+const turnDisplay = document.getElementById("turnPlayer");
+const redScoreSpan = document.getElementById("redScore");
+const blueScoreSpan = document.getElementById("blueScore");
+let turn = "red";
+let redScore = 0;
+let blueScore = 0;
+let nodes = [];
 let edges = [];
-let scores = { red: 0, blue: 0 };
-let timers = { red: 60, blue: 60 };
-let interval = null;
-
-// Initialize game
-function createBoard() {
-    boardElement.innerHTML = '';
-    boardNodes = [];
-    edges = [];
-
-    for (let i = 0; i < 18; i++) {
-        const node = {
-            id: i,
-            player: null,
-            element: document.createElement('div')
-        };
-        node.element.classList.add('node');
-        node.element.addEventListener('click', () => handleNodeClick(node));
-        boardElement.appendChild(node.element);
-        boardNodes.push(node);
-    }
-
-    edges = [
-        { from: 0, to: 1, weight: 1 }, { from: 1, to: 2, weight: 1 },
-        { from: 2, to: 3, weight: 1 }, { from: 3, to: 4, weight: 1 },
-        { from: 4, to: 5, weight: 1 }, { from: 5, to: 0, weight: 1 },
-        { from: 6, to: 7, weight: 2 }, { from: 7, to: 8, weight: 2 },
-        { from: 8, to: 9, weight: 2 }, { from: 9, to:10, weight: 2 },
-        { from:10, to:11, weight: 2 }, { from:11, to: 6, weight: 2 },
-        { from:12, to:13, weight: 3 }, { from:13, to:14, weight: 3 },
-        { from:14, to:15, weight: 3 }, { from:15, to:16, weight: 3 },
-        { from:16, to:17, weight: 3 }, { from:17, to:12, weight: 3 }
+function addNode(x, y, layer) {
+    let node = document.createElement("div");
+    node.classList.add("node");
+    node.style.left = `${x}px`;
+    node.style.top = `${y}px`;
+    node.dataset.owner = "";
+    node.dataset.layer = layer;
+    node.addEventListener("click", () => clickNode(node));
+    board.appendChild(node);
+    nodes.push(node);
+    return node;
+}
+function addEdge(x, y, length, angle, weight) {
+    let line = document.createElement("div");
+    line.classList.add("line");
+    line.style.left = `${x}px`;
+    line.style.top = `${y}px`;
+    line.style.width = `${length}px`;
+    line.style.transform = `rotate(${angle}deg)`;
+    board.appendChild(line);
+    let w = document.createElement("div");
+    w.classList.add("weight");
+    w.style.left = `${x + length/2}px`;
+    w.style.top = `${y - 10}px`;
+    w.innerText = weight;
+    board.appendChild(w);
+    edges.push({nodes: [], weight, line});
+}
+function setupBoard() {
+    let outer = [
+        addNode(300, 100, "outer"),
+        addNode(400, 170, "outer"),
+        addNode(370, 290, "outer"),
+        addNode(230, 290, "outer"),
+        addNode(200, 170, "outer"),
+        addNode(300, 100, "outer"),
     ];
+    addEdge(300,100,100,30,1);
+    addEdge(390,150,100,90,2);
+    addEdge(390,260,140,150,3);
+    addEdge(250,300,140,210,1);
+    addEdge(160,230,100,270,2);
+    addEdge(200,140,100,330,1);
+    let middle = [
+        addNode(300,150,"middle"),
+        addNode(350,190,"middle"),
+        addNode(330,240,"middle"),
+        addNode(270,240,"middle"),
+        addNode(250,190,"middle"),
+        addNode(300,150,"middle"),
+    ];
+    addEdge(300,150,50,30,6);
+    addEdge(340,170,50,90,5);
+    addEdge(320,230,70,150,4);
+    addEdge(280,240,70,210,1);
+    addEdge(240,200,50,270,1);
+    addEdge(260,160,50,330,1);
+    let inner = [
+        addNode(300,190,"inner"),
+        addNode(330,210,"inner"),
+        addNode(315,230,"inner"),
+        addNode(285,230,"inner"),
+        addNode(270,210,"inner"),
+        addNode(300,190,"inner"),
+    ];
+    addEdge(300,190,30,30,8);
+    addEdge(320,200,30,90,9);
+    addEdge(310,225,40,150,8);
+    addEdge(290,230,40,210,9);
+    addEdge(260,215,30,270,8);
+    addEdge(280,195,30,330,8);
 }
-
-function handleNodeClick(node) {
-    if (!node.player) {
-        node.player = currentPlayer;
-        node.element.classList.add(currentPlayer);
-        updateScores();
-        switchTurn();
+function clickNode(node) {
+    if (!node.dataset.owner) {
+        node.classList.add(turn);
+        node.dataset.owner = turn;
+        updateScore(node);
+        turn = turn === "red" ? "blue" : "red";
+        turnDisplay.textContent = turn.charAt(0).toUpperCase()+turn.slice(1);
     }
 }
-
-function updateScores() {
-    scores.red = 0;
-    scores.blue = 0;
-
-    edges.forEach(edge => {
-        const from = boardNodes[edge.from];
-        const to = boardNodes[edge.to];
-        if (from.player && from.player === to.player) {
-            scores[from.player] += edge.weight;
-        }
-    });
-
-    scoreRedElement.textContent = scores.red;
-    scoreBlueElement.textContent = scores.blue;
+function updateScore(node) {
+    let weight = node.dataset.layer === "outer" ? 1 :
+                 node.dataset.layer === "middle" ? 5 : 8;
+    if (node.dataset.owner === "red") redScore += weight;
+    else blueScore += weight;
+    redScoreSpan.textContent = redScore;
+    blueScoreSpan.textContent = blueScore;
 }
-
-function switchTurn() {
-    clearInterval(interval);
-    currentPlayer = currentPlayer === 'red' ? 'blue' : 'red';
-    startTimer();
-}
-
-function startTimer() {
-    interval = setInterval(() => {
-        timers[currentPlayer]--;
-        updateTimers();
-        if (timers[currentPlayer] <= 0) {
-            clearInterval(interval);
-            alert(`${currentPlayer.toUpperCase()} ran out of time!`);
-        }
-    }, 1000);
-}
-
-function updateTimers() {
-    timerRedElement.textContent = timers.red;
-    timerBlueElement.textContent = timers.blue;
-}
-
-function pauseGame() {
-    clearInterval(interval);
-}
-
-function resumeGame() {
-    startTimer();
-}
-
 function resetGame() {
-    clearInterval(interval);
-    timers = { red: 60, blue: 60 };
-    scores = { red: 0, blue: 0 };
-    updateTimers();
-    createBoard();
-    startTimer();
+    board.innerHTML = "";
+    nodes = [];
+    edges = [];
+    redScore = 0;
+    blueScore = 0;
+    turn = "red";
+    redScoreSpan.textContent = redScore;
+    blueScoreSpan.textContent = blueScore;
+    turnDisplay.textContent = "Red";
+    setupBoard();
 }
-
-createBoard();
-startTimer();
+setupBoard();
